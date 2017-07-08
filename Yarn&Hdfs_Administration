@@ -5,11 +5,11 @@ hadoop fs -cp dataset s3n://jingamastee/
 nano /usr/local/hadoop/etc/hadoop/core-site.xml
 <property>
 <name>fs.s3n.awsAccessKeyId</name>
-<value>AKIAIYH6RH5TVFK7F3KQ</value>
+<value>YOURAWSACCESSKEYID</value>
 </property>
 <property>
 <name>fs.s3n.awsSecretAccessKey</name>
-<value>tUQasAE9euUFvQ5hJ40NxGq7Rmm6eK2NKCpWAGsp</value>
+<value>YOURAWSACCESSSECRETKEY</value>
 </property>
 cd /usr/local/hadoop/share/hadoop/tools/lib/
 ls aws* azure*
