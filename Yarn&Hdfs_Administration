@@ -178,25 +178,25 @@ hadoop fs -count -h -q /user/ubuntu/testQuota
 hadoop dfsadmin -clrSpaceQuota /user/ubuntu/testQuota
 ======================================================================
 CREATE SNAPSHOTS
-hdfs dfs -mkdir /user/ubuntu/cloudage_data
-echo "This is my snapshot data at cloudage" | hdfs dfs -put - /user/ubuntu/cloudage_data/data.txt
-hdfs dfs -cat /user/ubuntu/cloudage_data/data.txt
-hdfs dfsadmin -allowSnapshot /user/ubuntu/cloudage_data
-hdfs dfs -createSnapshot /user/ubuntu/cloudage_data snapshot_folder
-hdfs dfs -rm -r -skipTrash /user/ubuntu/cloudage_data
-hdfs dfs -rm -r -skipTrash /user/ubuntu/cloudage_data/data.txt
-hdfs dfs -cat /user/ubuntu/cloudage_data/data.txt
-hdfs dfs -rm -r /user/ubuntu/cloudage_data/data.txt
-hdfs dfs -ls -R /user/ubuntu/cloudage_data/.snapshot
-hdfs dfs -cat /user/ubuntu/cloudage_data/.snapshot/snapshot_folder/data.txt
-hdfs dfs -cp /user/ubuntu/cloudage_data/.snapshot/snapshot_folder/data.txt /user/ubuntu/cloudage_data
-hdfs dfs -cat /user/ubuntu/cloudage_data/data.txt
+hdfs dfs -mkdir /user/ubuntu/foo_data
+echo "This is my snapshot data at foo" | hdfs dfs -put - /user/ubuntu/foo_data/data.txt
+hdfs dfs -cat /user/ubuntu/foo_data/data.txt
+hdfs dfsadmin -allowSnapshot /user/ubuntu/foo_data
+hdfs dfs -createSnapshot /user/ubuntu/foo_data snapshot_folder
+hdfs dfs -rm -r -skipTrash /user/ubuntu/foo_data
+hdfs dfs -rm -r -skipTrash /user/ubuntu/foo_data/data.txt
+hdfs dfs -cat /user/ubuntu/foo_data/data.txt
+hdfs dfs -rm -r /user/ubuntu/foo_data/data.txt
+hdfs dfs -ls -R /user/ubuntu/foo_data/.snapshot
+hdfs dfs -cat /user/ubuntu/foo_data/.snapshot/snapshot_folder/data.txt
+hdfs dfs -cp /user/ubuntu/foo_data/.snapshot/snapshot_folder/data.txt /user/ubuntu/foo_data
+hdfs dfs -cat /user/ubuntu/foo_data/data.txt
 hdfs lsSnapshottableDir
-hdfs dfsadmin -disallowSnapshot /user/ubuntu/cloudage_data/
-hdfs dfs -deleteSnapshot /user/ubuntu/cloudage_data/ snapshot_folder
+hdfs dfsadmin -disallowSnapshot /user/ubuntu/foo_data/
+hdfs dfs -deleteSnapshot /user/ubuntu/foo_data/ snapshot_folder
 hdfs dfs -renameSnapshot <path> <oldName> <newName>
 hdfs snapshotDiff /user/ubuntu/snapshot s20160820-000747.522 s20160820-000825.861
-hdfs snapshotDiff /user/ubuntu/cloudage_data snapshot_folder1 snapshot_folder2
+hdfs snapshotDiff /user/ubuntu/foo_data snapshot_folder1 snapshot_folder2
 ---------------------------------------------------------------------------------------------------------------
 Configure Backup Node
 
@@ -270,6 +270,104 @@ hadoop dfsadmin -report > report_aug
 hadoop dfsadmin -report
 
 
+wget https://s3-us-west-2.amazonaws.com/pipelinekondhwa/DataSet.txt
+2
+​
+3
+hadoop fs -cp s3n://pipelinekondhwa/DataSet.txt /user/ubuntu/dataset
+4
+hadoop fs -cp dataset s3n://jingamastee/
+5
+nano /usr/local/hadoop/etc/hadoop/core-site.xml
+6
+<property>
+7
+<name>fs.s3n.awsAccessKeyId</name>
+8
+<value>YOURAWSACCESSKEYID</value>
+9
+</property>
+10
+<property>
+11
+<name>fs.s3n.awsSecretAccessKey</name>
+12
+<value>YOURAWSACCESSSECRETKEY</value>
+13
+</property>
+14
+cd /usr/local/hadoop/share/hadoop/tools/lib/
+15
+ls aws* azure*
+16
+export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:$HADOOP_HOME/share/hadoop/tools/lib/*
+17
+echo $HADOOP_CLASSPATH
+18
+​
+19
+-----------------------------------------------------------------------------------------
+20
+https://streamsets.com/documentation/datacollector/latest/help/#Install_Config/CMInstall-
+21
+Overview.html#concept_nb5_c3m_25
+22
+sudo yum install wget -y
+23
+wget https://archives.streamsets.com/datacollector/2.5.1.1/rpm/streamsets-datacollector-2.5.1.1-all-rpms.tgz
+24
+​
+25
+tar -xzvf streamsets-datacollector-2.5.1.1-all-rpms.tgz
+26
+cd streamsets-datacollector-2.5.1.1-all-rpms
+27
+sudo yum localinstall streamsets*.rpm
+28
+sudo -i
+29
+service sdc start
+30
+ulimit -n 32768
+31
+http://34.204.13.74:18630/ 
+32
+*****************************************
+33
+only if your doing it with tar ball
+34
+./streamsets-datacollector-2.4.0.0/bin/streamsets stagelibs -list
+35
+sudo mkdir /etc/init.d/sdc
+36
+sudo groupadd sdc
+37
+sudo useradd -g sdc sdc
+38
+sudo nano /etc/security/limits.conf
+39
+ubuntu soft nofile 4096
+40
+______________________________________________________________________________________________
+41
+​
+42
+hadoop distcp hdfs://ip-10-0-0-189.ec2.internal:9001/user/ubuntu/data hdfs://ip-10-0-0-207.ec2.internal:9000/user/ubuntu/mahesh
+43
+​
+44
+hadoop distcp-Dfs.s3a.access.key=AKIAIXGMERR74SC5ZW3A -Dfs.s3a.secret.key=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 hdfs://ip-172-31-39-64.us-west-
+45
+2.compute.internal:9000/user/ubuntu//StreamSetDataColloctor hdfs://ip-172-31-16-56.us-west-2.compute.internal:9000/user/ubuntu/
+46
+​
+47
+hadoop distcp -Dfs.s3a.access.key=AKIAIXGMERR74SC5ZW3A -Dfs.s3a.secret.key=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 s3a://pipelinekondhwa/StreamSetDataColloctor hdfs://nn:9000/user/ubuntu/BigData.tsv
+48
+​
+49
+----------------------------------------------------------------------------------------------------------------------------
+50
 
 -------------------------------------------------------------------------------------------------
 
