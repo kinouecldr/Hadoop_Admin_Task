@@ -1,0 +1,8 @@
+#Cloudera download and instalation
+wget http://archive.cloudera.com/cm5/installer/latest/cloudera-manager-installer.bin
+
+#Change the permission of the file to execute
+chmod u+x cloudera-manager-installer.bin
+
+#Execute the file using root user
+sudo ./cloudera-manager-installer.bin
