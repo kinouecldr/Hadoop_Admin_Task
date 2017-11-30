@@ -1,0 +1,132 @@
+For more details on MIT Kerberos on Ubuntu, check the link : https://help.ubuntu.com/community/Kerberos
+#Make sure there is HDFS and YARN Gateway added as a role to a particular node.
+#Login to CM node to make it KDC and KAdmin Server
+ 
+sudo apt-get install krb5-kdc krb5-admin-server -y
+
+#Get the FQDN of CM node, to specify in Kerberos config files for KDC and KADMIN server value.
+hostname -f (ip-172-31-13-130.ec2.internal)
+
+sudo vi /etc/krb5.conf
+
+[libdefaults]
+ default_realm = HADOOPSECURITY.COM
+ dns_lookup_realm = false
+ dns_lookup_kdc = false
+ ticket_lifetime = 24h
+ renew_lifetime = 7d
+ forwardable = true
+
+ default_tgs_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96 arcfour-hmac-md5
+ default_tkt_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96 arcfour-hmac-md5
+ permitted_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96 arcfour-hmac-md5
+
+[realms]
+ HADOOPSECURITY.COM = {
+  kdc = ip-172-31-13-130.ec2.internal
+  admin_server = ip-172-31-13-130.ec2.internal
+  max_renewable_life = 7d
+ }
+
+[logging]
+    default = FILE:/var/log/krb5.log
+
+:wq
+
+sudo vi /etc/krb5kdc/kadm5.acl
+
+*/admin@HADOOPSECURITY.COM
+
+:wq
+
+sudo vi /etc/krb5kdc/kdc.conf    ->this is for ubuntu
+
+[kdcdefaults]
+ kdc_ports = 88
+ kdc_tcp_ports = 88
+
+[realms]
+ HADOOPSECURITY.COM = {
+  #master_key_type = aes256-cts
+  acl_file = /etc/krb5kdc/kadm5.acl
+  dict_file = /usr/share/dict/words
+  admin_keytab = FILE:/etc/krb5kdc/kadm5.keytab
+  supported_enctypes = aes256-cts:normal aes128-cts:normal des3-hmac-sha1:normal arcfour-hmac:normal des-hmac-sha1:normal des-cbc-md5:normal des-cbc-crc:normal
+	
+  max_renewable_life = 7d
+ }
+
+
+Create the Kerberos database with the following command:
+sudo krb5_newrealm
+"Give a master password"
+
+Start the KDC and KAdmin Server
+#sudo service krb5-kdc krb5-admin-server start
+
+exit
+to localmachine in the working directory.
+#Now next steps are as follows :
+a)To install the Kerberos client on all nodes in the cluster
+b) Copy the /etc/krb5.conf file to local machine and use scp to send the file to all nodes .
+c)then replace the file /etc/krb5.conf file with the file which we have create above
+
+#install workstation/kerberos client on all machines
+#the clustercmd.sh file will run install krb5-user i.e kerberos client on all nodes
+sh ./clustercmd.sh sudo apt install krb5-user libpam-krb5 -y
+
+#the putnmove.sh file will copy the krb5.conf from local machine to all nodes in cluster on path /etc/krb5.conf
+sh putnmove.sh ./krb5.conf /etc/
+
+
+#Place the JCE Encryption policy files on path for RDBMS data encryption
+#If you have already selected the checkbox to download JCE policy files while cluster installation using CM,
+then the files are available on the path as below, else place the files in the below directory of every node.
+
+#US_export_policy.jar file path as below
+/usr/lib/jvm/j2sdk1.6-oracle/jre/lib/security/US_export_policy.jar
+/usr/lib/jvm/java-7-oracle-cloudera/jre/lib/security/US_export_policy.jar 
+
+/usr/lib/jvm/j2sdk1.6-oracle/jre/lib/security/local_policy.jar
+/usr/lib/jvm/java-7-oracle-cloudera/jre/lib/security/local_policy.jar
+http://www.oracle.com/technetwork/java/javase/downloads/index.html
+
+
+ssh -i security.pem ec2-user@`cat cm`
+
+sudo kadmin.local
+
+addprinc cm/admin
+
+exit
+
+
+#to check kerberos is working fine, login to another host and create a ticket and validate.
+ssh -i security.pem ec2-user@`cat host`
+
+kinit cm/admin
+
+"password"
+
+klist -l
+
+EXIT
+
+#Now the MIT kerberos is working fine on the nodes, this needs to be setup for all services in hadoop cluster.
+ADMINISTRATION ENABLE KERBEROZ complete the wizard and DONE
+
+Kerberos Security Realm
+HADOOPSECURITY.COM
+
+aes256-cts-hmac-sha1-96
+aes128-cts-hmac-sha1-96
+arcfour-hmac-md5
+
+cm public or private dns (hostname -f) 
+
+cm/admin
+password
+
+RESTART CLUSTER.
+
+Successfully installed Kerberos.
