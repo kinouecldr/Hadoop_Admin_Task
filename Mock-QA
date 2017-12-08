@@ -1,0 +1,180 @@
+What is server logs?
+What are the different filters used to check service logs?
+Real time issue you faced and how you resolved it?
+Yarn Work Flow.
+What is auth_to_local parameter?
+	=> https://hortonworks.com/blog/fine-tune-your-apache-hadoop-security-settings/
+WA00047
+Q - Can you define sink group for load balancing in Flume.
+		Load balancing Sink Processor
+			Load balancing sink processor provides the ability to load-balance flow over multiple sinks. It maintains an indexed list of active sinks on 
+			which the load must be distributed. Implementation supports distributing load using either via round_robin or random selection mechanisms. 
+			The choice of selection mechanism defaults to round_robin type, but can be overridden via configuration. Custom selection mechanisms are 
+			supported via custom classes that inherits from AbstractSinkSelector.		
+			When invoked, this selector picks the next sink using its configured selection mechanism and invokes it. For round_robin and random.
+			In case the selected sink fails to deliver the event, the processor picks the next available sink via its configured selection mechanism. 
+			This implementation does not blacklist the failing sink and instead continues to optimistically attempt every available sink. 
+			If all sinks invocations result in failure, the selector propagates the failure to the sink runner.
+
+			a1.sinkgroups = g1
+			a1.sinkgroups.g1.sinks = k1 k2							-Space-separated list of sinks that are participating in the group
+			a1.sinkgroups.g1.processor.type = load_balance			-The component type name, needs to be load_balance
+			a1.sinkgroups.g1.processor.backoff = true				-Should failed sinks be backed off exponentially.
+			a1.sinkgroups.g1.processor.selector = random			-Selection mechanism. Must be either round_robin, random or FQCN of custom class that inherits from AbstractSinkSelector
+If backoff is enabled, the sink processor will blacklist sinks that fail, removing them for selection for a given timeout. When the timeout ends, if the sink is still unresponsive timeout is increased exponentially to avoid potentially getting stuck in long waits on unresponsive sinks. With this disabled, in round-robin all the failed sinks load will be passed to the next sink in line and thus not evenly balanced
+	=>	Flume Sink Processors
+		Sink groups allow users to group multiple sinks into one entity. 
+		Sink processors can be used to provide load balancing capabilities over all sinks inside the group or to achieve fail over from one sink to another in case of temporal failure.
+
+		Property Name	Default	Description
+		sinks	–	Space-separated list of sinks that are participating in the group
+		processor.type	default	The component type name, needs to be default, failover or load_balance
+		Example for agent named a1:
+
+		a1.sinkgroups = g1
+		a1.sinkgroups.g1.sinks = k1 k2
+		a1.sinkgroups.g1.processor.type = load_balance
+		
+		
+Q - If we want to use Avro Sink 2 properties , how can we define it?
+		Configuring a multi agent flow
+		To setup a multi-tier flow, you need to have an avro/thrift sink of first hop pointing to avro/thrift source of the next hop. 
+		This will result in the first Flume agent forwarding events to the next Flume agent. For example, if you are periodically sending files 
+		(1 file per event) using avro client to a local Flume agent, then this local agent can forward it to another agent that has the mounted for storage.
+			Weblog agent config:
+
+			# list sources, sinks and channels in the agent
+			agent_foo.sources = avro-AppSrv-source
+			agent_foo.sinks = avro-forward-sink
+			agent_foo.channels = file-channel
+
+			# define the flow
+			agent_foo.sources.avro-AppSrv-source.channels = file-channel
+			agent_foo.sinks.avro-forward-sink.channel = file-channel
+
+			# avro sink properties
+			agent_foo.sinks.avro-forward-sink.type = avro
+			agent_foo.sinks.avro-forward-sink.hostname = 10.1.1.100
+			agent_foo.sinks.avro-forward-sink.port = 10000
+
+			# configure other pieces
+			#...
+			
+			
+			HDFS agent config:
+
+			# list sources, sinks and channels in the agent
+			agent_foo.sources = avro-collection-source
+			agent_foo.sinks = hdfs-sink
+			agent_foo.channels = mem-channel
+
+			# define the flow
+			agent_foo.sources.avro-collection-source.channels = mem-channel
+			agent_foo.sinks.hdfs-sink.channel = mem-channel
+
+			# avro source properties
+			agent_foo.sources.avro-collection-source.type = avro
+			agent_foo.sources.avro-collection-source.bind = 10.1.1.100
+			agent_foo.sources.avro-collection-source.port = 10000
+		
+			agent_foo.sinks.hdfs-sink.type = hdfs
+			agent_foo.sinks.hdfs-sink.hdfs.path = hdfs://namenodeIP/flume/webdata
+			# configure other pieces
+			#...
+			
+			Here we link the avro-forward-sink from the weblog agent to the avro-collection-source of the hdfs agent. 
+			This will result in the events coming from the external appserver source eventually getting stored in HDFS.
+			
+Q - Tell me about any Upgrade in your Cluster (CM/CDH)
+	To update Cloudera Manager from version 5.X to 5.Y.
+		Step1) 	Stop the Cloudera Management Service. If emebedded PostgreSQL database is used , Stop all services that are using the embedded database:
+				Hive service and all services such as Impala and Hue that use the Hive metastore , Oozie , Sentry.
+		Step2)	Stop Cloudera Manager Server, Database, and Agent
+				$ sudo service cloudera-scm-server stop
+				$ sudo service cloudera-scm-server-db stop
+				$ sudo service cloudera-scm-agent stop
+		Step3)	Upgrade the JDK on Cloudera Manager Server and Agent Hosts
+		Step4)	Upgrade Cloudera Manager Server (Packages)
+				Find the Cloudera repo file for your distribution by starting at https://archive.cloudera.com/cm5/ and 
+				navigating to the directory that matches your operating system.
+					For example, for Red Hat or CentOS 6, you would go to https://archive.cloudera.com/cm5/redhat/6/x86_64/cm/. 
+						In that directory, find the repo file that contains information including the repository base URL and GPG key. 
+						The contents of the cloudera-manager.repo are similar to the following:
+						[cloudera-manager]
+						# Packages for Cloudera Manager, Version 5, on RHEL or CentOS 6 x86_64
+						name=Cloudera Manager
+						baseurl=https://archive.cloudera.com/cm5/redhat/6/x86_64/cm/5/
+						gpgkey = https://archive.cloudera.com/cm5/redhat/6/x86_64/cm/RPM-GPG-KEY-cloudera 
+						gpgcheck = 1
+	
+					For Ubuntu or Debian systems, go to the appropriate release directory, for example, https://archive.cloudera.com/cm4/debian/wheezy/amd64/cm. 
+					The repo file, in this case, cloudera.list, is similar to the following:
+						# Packages for Cloudera Manager, Version 5, on Debian 7.0 x86_64
+						deb https://archive.cloudera.com/cm5/debian/wheezy/amd64/cm wheezy-cm5 contrib
+						deb-src https://archive.cloudera.com/cm5/debian/wheezy/amd64/cm wheezy-cm5 contrib
+						The following commands clean cached repository information and update Cloudera Manager components:
+						$ sudo apt-get clean $ sudo apt-get update $ sudo apt-get dist-upgrade $ sudo apt-get install cloudera-manager-server cloudera-manager-daemons cloudera-manager-server-db-2 cloudera-manager-agent
+						During this process, you may be prompted about your configuration file version:
+						Configuration file `/etc/cloudera-scm-agent/config.ini' ==> Modified (by you or by a script) since installation. ==> Package distributor has shipped an updated version. What would you like to do about it ? Your options are: Y or I : install the package maintainer's version N or O : keep your currently-installed version D : show the differences between the versions Z : start a shell to examine the situation The default action is to keep your current version.
+						You will receive a similar prompt for /etc/cloudera-scm-server/db.properties. Answer N to both prompts.
+		Step5)	Start the Cloudera Manager Server (Packages)
+					On the Cloudera Manager Server host (the system on which you installed the cloudera-manager-server package) do the following:
+
+					If you are using the embedded PostgreSQL database for Cloudera Manager, start the database:
+					$ sudo service cloudera-scm-server-db start
+					Start the Cloudera Manager Server:
+					$ sudo service cloudera-scm-server start
+					You should see the following:
+					Starting cloudera-scm-server:    				[  OK  ]
+				Upgrade and Start Cloudera Manager Agent 
+					(Packages):
+						Log in to the Cloudera Manager Admin Console.
+						Upgrade hosts using one of the following methods:
+						Cloudera Manager installs Agent software
+						Select Yes, I would like to upgrade the Cloudera Manager Agent packages now and click Continue.
+						Select the release of the Cloudera Manager Agent to install. Normally, this is the Matched Release for this Cloudera Manager Server. 
+						However, if you used a custom repository (instead of archive.cloudera.com) for the Cloudera Manager server, select Custom Repository and 
+						provide the required information. The custom repository allows you to use an alternative location, but that location must contain the matched Agent version.
+					Manually install Agent software:
+						On all cluster hosts except the Cloudera Manager Server host, stop the Agent:
+						$ sudo service cloudera-scm-agent stop
+						
+						In the Cloudera Admin Console, select No, I would like to skip the agent upgrade now and click Continue.
+						Copy the appropriate repo file as described in Upgrade Cloudera Manager Server (Packages).
+						Run the following commands:
+						Operating System	Commands
+						RHEL	
+						$ sudo yum clean all $ sudo yum upgrade cloudera-manager-server cloudera-manager-daemons cloudera-manager-server-db-2 cloudera-manager-agent
+						Ubuntu or Debian
+						$ sudo apt-get clean $ sudo apt-get update $ sudo apt-get dist-upgrade $ sudo apt-get install cloudera-manager-agent cloudera-manager-daemons
+
+Q - Why Security Inspector is needed and how to run Security Inspector?
+Q - What about TLS/SSL clients.
+Q - What are the sevices stopped during the Upgradation of Cloudera Manager
+Q - How to take important backup for particular service.
+	-Metadata backup
+	-Hive Metastore Backup
+	-Database backup of services
+
+Q - can you tellme about oneclick Install?  	
+Q - While upgrading , if process fails, what to do in such case.
+	-If any process is failed during upgrade, and if restart is required, what can be done.
+	
+Q - Why Rolling Upgrade is required.
+Q - Production Cluster
+
+Q - If Datanode HDD is failed, how the data can be checked
+
+Q - What are the Services on the cluster.(HDFS,YARN,Zookeeper,Oozie,Flume,Hive,Sqoop,Hue)
+	Why are all of services required.
+
+Q - Tell me about the security in your Cluster (Active Directory)
+	=> The Senior Admin had configured, I have configured on Staging cluster 
+	
+Q - Why are keytab and JCE policies required.
+Q - how to map principles to Active Directory.
+	https://www.cloudera.com/documentation/enterprise/5-8-x/topics/cdh_sg_kerbprin_to_sn.html
+
+42:00 - 1:19:30
+Q- How kerberos works ?
+
