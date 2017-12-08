@@ -1,6 +1,106 @@
-
 1) Tell me something about you. (need to have a good flow for points)
 2) Tell me your Day-to-day activities (confidently say 12 activities)
+	1>To monitor the Health of the cluster using WebUI/CLI
+	-Using WebUI
+	???
+	???
+	???
+	-Using CLI
+		$ hdfs fsck /
+			.........Status: HEALTHY........
+			Total size: 146228151045063 B
+			Total dirs: 28152
+			Total files: 1077255
+			Total symlinks: 0
+			Total blocks (validated): 1170946 (avg. block size 124880354 B)
+			Minimally replicated blocks: 1170946 (100.0 %)
+			Over-replicated blocks: 0 (0.0 %)
+			Under-replicated blocks: 0 (0.0 %)
+			Mis-replicated blocks: 0 (0.0 %)
+			Default replication factor: 3
+			Average block replication: 2.9950006
+			Corrupt blocks: 0
+			Missing replicas: 0 (0.0 %)
+			Number of data-nodes: 18
+			Number of racks: 1
+			FSCK ended at Fri May 01 09:45:41 CDT 2015 in 18069 milliseconds
+			The filesystem under path '/' is HEALTHY
+	2>Balancing HDFS
+		The best way to figure out whether the frequency of balancing is okay is to issue the hdfs dfsadmin –report command and check how closely the nodes are balanced
+		in terms of HDFS data.
+		# sudo -u hdfs hdfs dfsadmin -report | cat <(echo "Name: Total") - | grep '^\(Name\|Total\|DFSUsed\)' | tr '\n' '\t' | sed -e 's/\(Name\)/\n\1/g' | sort --field-separator=:--key=5,5n
+		Name: Total DFS Used: 2141803616206687 (1.90 PB) DFS Used%: 59.08%
+		Name: 10.192.0.106:50010 (hadoop03.example.com) DFS Used: 46065068713731 (41.90TB) DFS Used%: 50.25%
+		Name: 10.192.0.108:50010 (hadoop05.example.com) DFS Used: 46077744360551 (41.91TB) DFS Used%: 50.26%
+		Name: 10.192.0.110:50010 (hadoop07.example.com) DFS Used: 46176056279144 (42.00TB) DFS Used%: 50.37%
+			
+		In this case, the DFS Used percentage is pretty much the same on most nodes, so no balancing is required. If you run the balancer now, there’s no harm—it wraps up very
+		quickly since there’s not much for it to do.Sometimes a balancer job gets stuck, or is just too slow. You can restart the balancer in such a situation. 
+		First find out the process ID (PID) of the running balancer process with the following command:
+		# ps aux | grep '\-Dproc_balancer' | grep -v grep
+		Once you find the PID of the balancer job, kill it, and also remove the balancer lock file, as shown here:
+		# rm /tmp/hdfs-balancer.lock
+		
+		
+		hdfs balancer
+          [-policy <policy>]
+          [-threshold <threshold>]                                       	Percentage of disk capacity. This overwrites the default threshold.
+          [-exclude [-f <hosts-file> | <comma-separated list of hosts>]]	Excludes the specified datanodes from being balanced by the balancer.
+          [-include [-f <hosts-file> | <comma-separated list of hosts>]]	Includes only the specified datanodes to be balanced by the balancer.
+          [-source [-f <hosts-file> | <comma-separated list of hosts>]]		Pick only the specified datanodes as source nodes.
+          [-blockpools <comma-separated list of blockpool ids>]				The balancer will only run on blockpools included in this list.
+          [-idleiterations <idleiterations>]								Maximum number of idle iterations before exit. This overwrites the default idleiterations(5).
+          [-runDuringUpgrade]												  Display the tool usage and help information and exit.
+		  		
+	3> Cluster Data backups:
+		
+		-HDFS Metadata Backup
+			Backing Up the HDFS Metadata on the NameNode
+			Backing Up the Metadata Using the -fetchImage Command
+				a. Place the active NameNode in safe mode so HDFS is in a read-only state when
+					you back up its metadata. Also verify that the cluster is in safe mode.
+				# su hdfs
+				bash-3.2$ hdfs dfsadmin -fs hdfs://hadoop011node01.example.com -safemode enter
+				Safe mode is ON
+				$ hdfs dfsadmin -fs hdfs://hadoop11node01.example.com -safemode get
+				Safe mode is ON
+				$
+				b. Run the –saveNamespace command, which will save the current in-memory
+				image file to a new fsimage file and reset the edits file, as well:
+				$ hdfs dfsadmin -fs hdfs://hadoop011node01.example.com -saveNamespace
+				Save namespace successful					
+				c. Issue the -fetchImage command to back up the HDFS metadata to disk.
+					$ mkdir /tmp/Backups_node01
+					$ hdfs dfsadmin -fs hdfs://hadoop011node01.example.com -fetchImage /tmp/Backups_node01
+						16/08/26 11:41:01 INFO namenode.TransferFsImage: Opening connection to
+						http://bdaolc011node01.sabre.com:50070/imagetransfer?getimage=1&txid=latest
+						16/08/26 11:41:01 INFO namenode.TransferFsImage: Image Transfer timeout
+						configured to 60000 milliseconds
+						16/08/26 11:41:04 INFO namenode.TransferFsImage: Transfer took 3.45s at 72463.81 KB/s
+				d. Verify the metadata backup.
+					$ ls -altr /tmp/Backups_node01
+					total 250552
+					drwxrwxrwt 22 root root 4096 Aug 26 11:40 ..
+					-rw-r--r-- 1 hdfs hadoop 256297032 Aug 26 11:41 fsimage_0000000000490831699
+					drwxr-xr-x 2 hdfs hadoop 4096 Aug 26 11:41 .
+			
+				e. Take the active NameNode out of safe mode.
+					$ hdfs dfsadmin -fs hdfs://hadoop011node01.example.com -safemode leave
+					Safe mode is OFF
+		-HDFS Replicsation
+		-Backing Up the Metastore Databases
+			Assuming you’re using the MySQL database as the repository for the metastores of
+			the Hadoop components, issue the mysqldump command to back up the MySQL database.
+			Here’s the syntax:
+			$ mysqldump –h hostname –u username –p password database > /backup/mysql/mysql_backup.sql
+		-Hive Replication
+			Hive metastore 9083 thrift Service for accessing Metadata
+			hive.metastore.uris
+		-Cluster Backup using Distcp
+	-Manager Cloudera Manager Users.
+	-Create snapshot 
+	-Configure Trash 
+	-Setting Users Space Quota, number of file quota
 Suggesstions : In real time scenario , 12 to 15 daytoday activities.
 3) Do you know what are under-replicated blocks
                 get the full details of the files which are causing your problem using
@@ -169,9 +269,22 @@ Container is a YARN term. This is a unit of resource allocation. For example, Ma
                                 create-hive-table – Determines if set job will fail if a Hive table already exists. It works in this case.
                                 hive-table – Specifies <db_name>.<table_name>. Here it's sqoop_workspace.customers, where sqoop_workspace is my database and customers is the table name.
 19) Tell me how sqoop works?
+	=> 	Sqoop will connect to the database.
+		Sqoop uses JDBC to examine the table by retrieving a list of all the columns and their SQL data types. 
+		These SQL types (varchar, integer and more) can then be mapped to Java data types (String, Integer etc.)
+		Sqoop’s code generator will use this information to create a table-specific class to hold records extracted from the table.
+		Sqoop will connect to cluster and submit a MapReduce job.
+		The dataset being transferred is sliced up into different partitions and a map-only job is launched with individual mappers 
+		responsible for transferring a slice of this dataset.
+		For databases, Sqoop will read the table row-by-row into HDFS. for mainframe datasets, sqoop will read records from each mainframe 
+		dataset into HDFS. The output of this import process is a set of files containing a copy of imported table or datasets. 
+		The import process is performed in parallel for this reason, the output will be in multiple files. 
+		These files may be delimited text files CSV, TSV or binary Avro or Sequence files containing serialized record data. By default it is CSV.
                                 Sqoop uses MapReduce to import and export the data, which provides parallel operation as well as fault tolerance.
                                 http://sqoop.apache.org/docs/1.4.6/SqoopUserGuide.html#_controlling_parallelism
 20) How do you configure Flume?
+		Each component (source, sink or channel) in the flow has a name, type, and set of properties that are specific to the type and instantiation.
+	Tell me the Flume architecture.
                 => Flume Agent consists of Source , Channel , Sink.
 21)In HA, what is the use of Quorum Journal Nodes?
 22) Do you know about Namenode Fencing?
@@ -188,12 +301,6 @@ Container is a YARN term. This is a unit of resource allocation. For example, Ma
                 =>ContainerZero is first container launched when a job is submitted.
 28) Have you generated any reports, (Daily Reports)
                 =>Main Menu -> Clusters-> Reports
-29)
-
-
-
-
-
 ----------------INFO-------------------------
  
  
