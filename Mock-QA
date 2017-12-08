@@ -178,3 +178,41 @@ Q - how to map principles to Active Directory.
 42:00 - 1:19:30
 Q- How kerberos works ?
 
+
+
+Day to Day Activities-Abhishek
+1) Perform Health checkup using WebUI for namenode and resource Manager
+2) Manage Alert Publisher in Cloudera Manager
+	-Under Cloudera Management Service
+	-Logs related to particular clouder management service are stored under : 
+		/var/log/cloudera-scm-agent/cloudera-scm-alertpublisher  -> Alert Publisher
+		/var/log/cloudera-scm-agent/cloudera-scm-eventserver  -> Event Server
+	-Cloudera Manger installer logs are stored in /var/log/cloudera-scm-agent/cloudera-manager-installer
+	
+	
+3) Generate Cluster health report from CM, using Report Manager.
+4) Backups
+	-Namenode Metadata backups
+	-Hive Metastore Backup
+	-Job Output backups on S3
+
+5)Creating Custom Alerts
+	-Check if Jobs are pending on the cluster.
+	-Go to YARN > status page
+	-Create trigger
+	-in expression tab :
+		if(select pending_containers_cumulative where category=YARN.POOL and servicename=SERVICENAME
+		   and queueName=root and last(pending_containers_cumulative) >10) DO health:bad
+	To test the above trigger, run a job(....jar pi 50 50) on hadoop cluster.
+	Check the YARN status in ->Cluster>Yarn Applications
+	Check the YARN status in ->Cluster>Dynamic Resource Pools
+
+6) Configure the Alert Publisher.
+	-Go to Cloudera Management Service
+	-Alert Publisher
+	-Mail SMTP details
+
+	To check the email was sent , Diagnostics>Logs>Search 'email'
+7) Generate Custom report.
+	Go to Cluster>report>Custom Reports
+
