@@ -392,7 +392,7 @@ sudo vi /var/kerberos/krb5kdc/kadm5.acl
 #sudo vi  /etc/krb5kdc/kadm5.acl
 
 */admin@HADOOPSECURITY.COM      *
-9834176505
+
 
 :wq
 
